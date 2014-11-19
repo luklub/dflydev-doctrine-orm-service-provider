@@ -33,6 +33,7 @@ use Doctrine\ORM\Mapping\Driver\SimplifiedYamlDriver;
 use Doctrine\ORM\Mapping\Driver\XmlDriver;
 use Doctrine\ORM\Mapping\Driver\YamlDriver;
 use Doctrine\ORM\Mapping\Driver\StaticPHPDriver;
+use Doctrine\ORM\Mapping\Driver\PHPDriver;
 use Doctrine\ORM\Repository\DefaultRepositoryFactory;
 use Pimple\Container;
 use Pimple\ServiceProviderInterface;
@@ -181,9 +182,13 @@ class DoctrineOrmServiceProvider implements ServiceProviderInterface
                             $driver = new SimplifiedXmlDriver(array($entity['path'] => $entity['namespace']));
                             $chain->addDriver($driver, $entity['namespace']);
                             break;
-                        case 'php':
+                        case 'static_php':
                             $driver = new StaticPHPDriver($entity['path']);
                             $chain->addDriver($driver, $entity['namespace']);
+                            break;
+                        case 'php':
+                            $driver = new PHPDriver($entity['path']);
+                            $chain->addDriver($driver, $entity['namespace']);                       
                             break;
                         default:
                             throw new \InvalidArgumentException(sprintf('"%s" is not a recognized driver', $entity['type']));

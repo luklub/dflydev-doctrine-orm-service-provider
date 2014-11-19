@@ -152,7 +152,7 @@ Configuration
 
      Each mapping definition should be an array with the following
      options:
-     * **type**: Mapping driver type, one of `annotation`, `xml`, `yml`, `simple_xml`, `simple_yml` or `php`.
+     * **type**: Mapping driver type, one of `annotation`, `xml`, `yml`, `simple_xml`, `simple_yml`, `static_php` or `php`.
      * **namespace**: Namespace in which the entities reside.
      
      *New: the `simple_xml` and `simple_yml` driver types were added in v1.1 and provide support for the [simplified XML driver][8] and [simplified YAML driver][9] of Doctrine.*
