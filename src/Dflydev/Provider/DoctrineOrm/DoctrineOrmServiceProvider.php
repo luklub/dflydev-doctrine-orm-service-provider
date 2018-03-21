@@ -17,6 +17,7 @@ use Doctrine\Common\Cache\CacheProvider;
 use Doctrine\Common\Cache\FilesystemCache;
 use Doctrine\Common\Cache\MemcacheCache;
 use Doctrine\Common\Cache\MemcachedCache;
+use Doctrine\Common\Cache\CouchbaseCache;
 use Doctrine\Common\Cache\XcacheCache;
 use Doctrine\Common\Cache\RedisCache;
 use Doctrine\Common\Persistence\Mapping\Driver\MappingDriver;
@@ -45,6 +46,11 @@ use Pimple\ServiceProviderInterface;
  */
 class DoctrineOrmServiceProvider implements ServiceProviderInterface
 {
+    /**
+     * Register ORM service.
+     *
+     * @param Container $container
+     */
     public function register(Container $container)
     {
         foreach ($this->getOrmDefaults() as $key => $value) {
@@ -130,9 +136,9 @@ class DoctrineOrmServiceProvider implements ServiceProviderInterface
                 $config->setProxyNamespace($container['orm.proxies_namespace']);
                 $config->setAutoGenerateProxyClasses($container['orm.auto_generate_proxies']);
 
-                $config->setCustomStringFunctions($container['orm.custom.functions.string']); 
-                $config->setCustomNumericFunctions($container['orm.custom.functions.numeric']); 
-                $config->setCustomDatetimeFunctions($container['orm.custom.functions.datetime']); 
+                $config->setCustomStringFunctions($container['orm.custom.functions.string']);
+                $config->setCustomNumericFunctions($container['orm.custom.functions.numeric']);
+                $config->setCustomDatetimeFunctions($container['orm.custom.functions.datetime']);
                 $config->setCustomHydrationModes($container['orm.custom.hydration_modes']);
 
                 $config->setClassMetadataFactoryName($container['orm.class_metadata_factory_name']);
@@ -302,6 +308,10 @@ class DoctrineOrmServiceProvider implements ServiceProviderInterface
             $redis = $container['orm.cache.factory.backing_redis']();
             $redis->connect($cacheOptions['host'], $cacheOptions['port']);
 
+            if (isset($cacheOptions['password'])) {
+                $redis->auth($cacheOptions['password']);
+            }
+
             $cache = new RedisCache;
             $cache->setRedis($redis);
 
@@ -325,28 +335,44 @@ class DoctrineOrmServiceProvider implements ServiceProviderInterface
                 throw new \RuntimeException('FilesystemCache path not defined');
             }
 
-            return new FilesystemCache($cacheOptions['path']);
+            $cacheOptions += array(
+                'extension' => FilesystemCache::EXTENSION,
+                'umask' => 0002,
+            );
+            return new FilesystemCache($cacheOptions['path'], $cacheOptions['extension'], $cacheOptions['umask']);
+        });
+
+        $container['orm.cache.factory.couchbase'] = $container->protect(function($cacheOptions){
+          $host='';
+          $bucketName='';
+          $user='';
+          $password='';
+          if (empty($cacheOptions['host'])) {
+            $host='127.0.0.1';
+          }
+          if (empty($cacheOptions['bucket'])) {
+            $bucketName='default';
+          }
+          if (!empty($cacheOptions['user'])) {
+            $user=$cacheOptions['user'];
+          }
+          if (!empty($cacheOptions['password'])) {
+            $password=$cacheOptions['password'];
+          }
+
+          $couchbase = new \Couchbase($host,$user,$password,$bucketName);
+          $cache = new CouchbaseCache();
+          $cache->setCouchbase($couchbase);
+          return $cache;
         });
 
         $container['orm.cache.factory'] = $container->protect(function ($driver, $cacheOptions) use ($container) {
-            switch ($driver) {
-                case 'array':
-                    return $container['orm.cache.factory.array']();
-                case 'apc':
-                    return $container['orm.cache.factory.apc']();
-                case 'xcache':
-                    return $container['orm.cache.factory.xcache']();
-                case 'memcache':
-                    return $container['orm.cache.factory.memcache']($cacheOptions);
-                case 'memcached':
-                    return $container['orm.cache.factory.memcached']($cacheOptions);
-                case 'filesystem':
-                    return $container['orm.cache.factory.filesystem']($cacheOptions);
-                case 'redis':
-                    return $container['orm.cache.factory.redis']($cacheOptions);
-                default:
-                    throw new \RuntimeException("Unsupported cache type '$driver' specified");
+            $cacheFactoryKey = 'orm.cache.factory.'.$driver;
+            if (!isset($container[$cacheFactoryKey])) {
+                throw new \RuntimeException("Factory '$cacheFactoryKey' for cache type '$driver' not defined (is it spelled correctly?)");
             }
+
+            return $container[$cacheFactoryKey]($cacheOptions);
         });
 
         $container['orm.mapping_driver_chain.locator'] = $container->protect(function ($name = null) use ($container) {
@@ -412,8 +438,6 @@ class DoctrineOrmServiceProvider implements ServiceProviderInterface
     /**
      * Get default ORM configuration settings.
      *
-     * @param Container $container
-     *
      * @return array
      */
     protected function getOrmDefaults()
@@ -422,7 +446,9 @@ class DoctrineOrmServiceProvider implements ServiceProviderInterface
             'orm.proxies_dir' => __DIR__.'/../../../../../../../../cache/doctrine/proxies',
             'orm.proxies_namespace' => 'DoctrineProxy',
             'orm.auto_generate_proxies' => true,
-            'orm.default_cache' => 'array',
+            'orm.default_cache' => array(
+                'driver' => 'array',
+            ),
             'orm.custom.functions.string' => array(),
             'orm.custom.functions.numeric' => array(),
             'orm.custom.functions.datetime' => array(),

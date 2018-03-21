@@ -1,3 +1,15 @@
+# 2.0.x
+
+## 2.0.x-dev
+
+## v2.0.1 (2015-09-07)
+
+ * @dominikzogg: Removed PSR-0 resource locator (#43)
+ * @bc-luke: Add auth cache option for Redis (#48)
+ * @c960657: Security fix for FileCache (#57)
+ * @straccio: Added couchebase cache support (#50)
+ * @damiankloip: Default cache configuration is now an array (#51)
+
 ## v2.0.0 (2014-07-24)
 
  * @andrewshell: Support Pimple 3 (#39)
@@ -6,6 +18,12 @@
  * @dominikzogg: Remove Silex tests (#31)
  * @simensen: Purge PSR-0 Resource Locator
  * @dominikzogg: Support for Pimple 2 (#26)
+
+# 1.0.x
+
+## 1.0.x-dev
+
+ * @bc-luke: Add auth cache option for Redis (#48)
 
 ## v1.0.5 (2014-06-17)
 
